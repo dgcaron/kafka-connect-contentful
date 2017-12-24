@@ -7,7 +7,6 @@ import com.contentful.java.cda.CDAClient;
 import com.contentful.java.cda.CDAEntry;
 import com.contentful.java.cda.SynchronizedSpace;
 import io.confluent.connect.contentful.utils.ContentfulSchemas;
-import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
@@ -25,7 +24,9 @@ public class ContentfulSourceTask  extends SourceTask {
 
     private String space;
 
-    private String topicPrefix;
+    private String topicAssets;
+
+    private String topicContentTypes;
 
     private String syncToken;
 
@@ -35,7 +36,8 @@ public class ContentfulSourceTask  extends SourceTask {
         config = new ContentfulSourceConnectorConfig(props);
 
         space = config.getString(ContentfulSourceConnectorConfig.SPACE_CONFIG);
-        topicPrefix = config.getString(ContentfulSourceConnectorConfig.TOPIC_PREFIX_CONFIG);
+        topicContentTypes = config.getString(ContentfulSourceConnectorConfig.TOPIC_CONTENTTYPES_NAME_CONFIG);
+        topicAssets = config.getString(ContentfulSourceConnectorConfig.TOPIC_ASSETS_NAME_CONFIG);
         String token = config.getString(ContentfulSourceConnectorConfig.ACCESSTOKEN_CONFIG);
 
         if(space.isEmpty() || token.isEmpty())
@@ -48,24 +50,22 @@ public class ContentfulSourceTask  extends SourceTask {
                 .setToken(token)
                 .build();
 
+        List<Map<String, String>> partitions = getPartitions();
+        if(partitions != null && partitions.size() > 0) {
+            Map<Map<String, String>, Map<String, Object>> offsets = context.offsetStorageReader().offsets(partitions);
+            Map<String, Object> offset = offsets == null ? null : offsets.get(partitions.get(0));
 
-        Map partition = Collections.singletonMap("space", space);
-        List<Map<String, String>> partitions = new ArrayList<>(1);
-
-        Map<Map<String, String>, Map<String, Object>> offsets  = context.offsetStorageReader().offsets(partitions);
-
-        Map sourceOffset = Collections.singletonMap("position", syncToken);
-
+            if (offset != null) {
+                syncToken = (String) offset.get("position");
+            }
+        }
         stop = new AtomicBoolean(false);
     }
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException
     {
-        Map partition = Collections.singletonMap("space", space);
-
-    while(!stop.get())
-        {
+        while(!stop.get()) {
             final List<SourceRecord> results = new LinkedList<>();
             SynchronizedSpace deltas;
             if(syncToken.isEmpty()){
@@ -75,8 +75,10 @@ public class ContentfulSourceTask  extends SourceTask {
                 deltas = client.sync(syncToken).fetch();
             }
 
-            if(deltas != null)
-            {
+            if(deltas != null) {
+                // hold it locally
+                syncToken = deltas.nextSyncUrl();
+                offset = Collections.singletonMap("position", syncToken);
 
                 if(deltas.entries() != null)
                 {
@@ -84,7 +86,9 @@ public class ContentfulSourceTask  extends SourceTask {
                     {
                         String key = entry.getKey();
                         CDAEntry content = entry.getValue();
-                        //results.add(new SourceRecord(partition,offset,topicPrefix+".updates", ContentfulSchemas.Key, ((Object)key), ContentfulSchemas.Entry,((Object)content));
+                        Map<String, String> partition =  Collections.singletonMap(ContentfulSourceTaskConfig.CONTENTTYPE_NAME_KEY, content.contentType().name());
+
+                        results.add(new SourceRecord(partition, offset, topicContentTypes, ContentfulSchemas.Key, key, ContentfulSchemas.Entry, content));
                     }
                 }
 
@@ -93,23 +97,30 @@ public class ContentfulSourceTask  extends SourceTask {
                     for(Map.Entry<String, CDAAsset> asset : deltas.assets().entrySet())
                     {
                         String key = asset.getKey();
-                        CDAAsset content = asset.getValue();
-                        //results.add(new SourceRecord(partition,offset,topicPrefix+".updates", ContentfulSchemas.Key, ((Object)key), ContentfulSchemas.Asset, content);
+                        Map<String, String> partition =  Collections.singletonMap(ContentfulSourceTaskConfig.ASSET_NAME_KEY, ContentfulSourceTaskConfig.ASSET_NAME_KEY);
+                        results.add(new SourceRecord(partition, offset, topicAssets, ContentfulSchemas.Key, key, ContentfulSchemas.Asset, asset));
                     }
                 }
-
-
-                // process the entries
-
-                // hold it locally
-                syncToken = deltas.nextSyncUrl();
-                offset = Collections.singletonMap("position", syncToken);
 
                 return results;
             }
         }
 
         return null;
+    }
+
+    private List<Map<String, String>> getPartitions(){
+        List<String> contentTypes = config.getList(ContentfulSourceTaskConfig.CONTENTTYPES_CONFIG);
+
+        List<Map<String, String>> partitions = new ArrayList<>(contentTypes.size());
+        for (String contentType : contentTypes) {
+            Map<String, String> partition =
+                    Collections.singletonMap(ContentfulSourceTaskConfig.CONTENTTYPE_NAME_KEY, contentType);
+            partitions.add(partition);
+        }
+
+        partitions.add(Collections.singletonMap(ContentfulSourceTaskConfig.ASSET_NAME_KEY, ContentfulSourceTaskConfig.ASSET_NAME_KEY));
+        return partitions;
     }
 
     @Override

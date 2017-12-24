@@ -12,9 +12,27 @@ public class ContentfulSourceConnectorConfig  extends AbstractConfig {
 
     public static final String ACCESSTOKEN_CONFIG = "contentful.token";
 
-    public static final String TOPIC_PREFIX_CONFIG = "topic.prefix";
+    public static final String POLL_INTERVAL_MS_CONFIG = "poll.interval.ms";
+
+    public static final String POLL_INTERVAL_CONTENTTYPES_MS_CONFIG = "poll.interval.contenttypes.ms";
+
+    public static final String TOPIC_CONTENTTYPES_NAME_CONFIG = "topic.contenttypes.name";
+
+    private static final String TOPIC_CONTENTTYPES_NAME_DOC = "Name of the Kafka topic to publish contenttypes to.";
+
+    private static final String TOPIC_CONTENTTYPES_NAME_DISPLAY = "Topic Name";
+
+    public static final String TOPIC_ASSETS_NAME_CONFIG = "topic.assets.name";
+
+    private static final String TOPIC_ASSETS_NAME_DOC = "Name of the Kafka topic to publish assets to.";
+
+    private static final String TOPIC_ASSETS_NAME_DISPLAY = "Topic Name";
 
     public static final ConfigDef CONFIG_DEF = Create();
+
+    protected ContentfulSourceConnectorConfig(ConfigDef subclassConfigDef, Map<String, String> props) {
+        super(subclassConfigDef, props);
+    }
 
     public ContentfulSourceConnectorConfig(Map<String, String> props) {
         super(CONFIG_DEF, props);

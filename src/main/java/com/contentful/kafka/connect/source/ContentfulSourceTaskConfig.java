@@ -1,4 +1,4 @@
-package io.confluent.connect.contentful.source;
+package com.contentful.kafka.connect.source;
 
 import org.apache.kafka.common.config.ConfigDef;
 

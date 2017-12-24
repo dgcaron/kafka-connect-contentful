@@ -1,4 +1,4 @@
-package io.confluent.connect.contentful.utils;
+package com.contentful.kafka.connect.utils;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;

@@ -1,9 +1,8 @@
-package io.confluent.connect.contentful.source;
+package com.contentful.kafka.connect.source;
 
 import com.contentful.java.cma.CMAClient;
 import com.contentful.java.cma.model.CMAArray;
 import com.contentful.java.cma.model.CMAContentType;
-import io.confluent.connect.contentful.ContentfulSourceConnector;
 import org.apache.kafka.connect.connector.ConnectorContext;
 import org.apache.kafka.connect.errors.ConnectException;
 

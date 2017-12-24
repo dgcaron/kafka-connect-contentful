@@ -1,4 +1,4 @@
-package io.confluent.connect.contentful.source;
+package com.contentful.kafka.connect.source;
 
 import java.lang.Object;
 
@@ -6,7 +6,7 @@ import com.contentful.java.cda.CDAAsset;
 import com.contentful.java.cda.CDAClient;
 import com.contentful.java.cda.CDAEntry;
 import com.contentful.java.cda.SynchronizedSpace;
-import io.confluent.connect.contentful.utils.ContentfulSchemas;
+import com.contentful.kafka.connect.utils.ContentfulSchemas;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;

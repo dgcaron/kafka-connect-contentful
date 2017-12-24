@@ -1,14 +1,14 @@
-package io.confluent.connect.contentful;
+package com.contentful.kafka.connect;
 
-import io.confluent.connect.contentful.source.ContentTypeMonitorThread;
-import io.confluent.connect.contentful.source.ContentfulSourceTaskConfig;
-import io.confluent.connect.contentful.utils.StringUtils;
+import com.contentful.kafka.connect.source.ContentTypeMonitorThread;
+import com.contentful.kafka.connect.source.ContentfulSourceTaskConfig;
+import com.contentful.kafka.connect.utils.StringUtils;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
-import io.confluent.connect.contentful.source.ContentfulSourceTask;
-import io.confluent.connect.contentful.source.ContentfulSourceConnectorConfig;
+import com.contentful.kafka.connect.source.ContentfulSourceTask;
+import com.contentful.kafka.connect.source.ContentfulSourceConnectorConfig;
 import org.apache.kafka.connect.util.ConnectorUtils;
 
 import java.util.ArrayList;

@@ -14,7 +14,7 @@
  * limitations under the License.
  **/
 
-package io.confluent.connect.contentful.utils;
+package com.contentful.kafka.connect.utils;
 
 /**
  * General string utilities that are missing from the standard library and may commonly be

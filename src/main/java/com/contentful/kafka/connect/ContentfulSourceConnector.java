@@ -18,7 +18,7 @@ import java.util.Map;
 
 public class ContentfulSourceConnector  extends SourceConnector {
 
-    private final long MAX_TIMEOUT = 10000L;
+    private final long MAX_TIMEOUT = 100000L;
 
     private Map<String, String> configProperties;
 
@@ -57,11 +57,12 @@ public class ContentfulSourceConnector  extends SourceConnector {
         config = new ContentfulSourceConnectorConfig(props);
 
         String space = config.getString(ContentfulSourceConnectorConfig.SPACE_CONFIG);
-        String token = config.getString(ContentfulSourceConnectorConfig.ACCESSTOKEN_CONFIG);
+        String cmaAccessToken = config.getString(ContentfulSourceConnectorConfig.CMA_ACCESSTOKEN_CONFIG);
 
-        long pollingInterval = config.getLong(ContentfulSourceConnectorConfig.POLL_INTERVAL_CONTENTTYPES_MS_CONFIG);
+        int pollingInterval = config.getInt(ContentfulSourceConnectorConfig.POLL_INTERVAL_CONTENTTYPES_MS_CONFIG);
 
-        monitor = new ContentTypeMonitorThread(this.context,space,token, pollingInterval,MAX_TIMEOUT);
+        monitor = new ContentTypeMonitorThread(this.context,space,cmaAccessToken, pollingInterval,MAX_TIMEOUT);
+        monitor.start();
     }
 
     @Override

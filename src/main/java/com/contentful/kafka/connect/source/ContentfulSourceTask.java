@@ -7,20 +7,29 @@ import com.contentful.java.cda.CDAClient;
 import com.contentful.java.cda.CDAEntry;
 import com.contentful.java.cda.SynchronizedSpace;
 import com.contentful.kafka.connect.utils.ContentfulSchemas;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ContentfulSourceTask  extends SourceTask {
 
-    private ContentfulSourceConnectorConfig config;
+    private static final Logger log = LoggerFactory.getLogger(ContentfulSourceTask.class);
+
+    private ContentfulSourceTaskConfig config;
 
     private CDAClient client;
 
-    private AtomicBoolean stop;
+    private CountDownLatch stop;
 
     private String space;
 
@@ -33,12 +42,12 @@ public class ContentfulSourceTask  extends SourceTask {
     private Map offset;
 
     public void start(Map<String, String> props) {
-        config = new ContentfulSourceConnectorConfig(props);
+        config = new ContentfulSourceTaskConfig(props);
 
         space = config.getString(ContentfulSourceConnectorConfig.SPACE_CONFIG);
-        topicContentTypes = config.getString(ContentfulSourceConnectorConfig.TOPIC_CONTENTTYPES_NAME_CONFIG);
+        topicContentTypes = config.getString(ContentfulSourceConnectorConfig.TOPIC_ENTRIES_NAME_CONFIG);
         topicAssets = config.getString(ContentfulSourceConnectorConfig.TOPIC_ASSETS_NAME_CONFIG);
-        String token = config.getString(ContentfulSourceConnectorConfig.ACCESSTOKEN_CONFIG);
+        String token = config.getString(ContentfulSourceConnectorConfig.CDA_ACCESSTOKEN_CONFIG);
 
         if(space.isEmpty() || token.isEmpty())
         {
@@ -59,16 +68,33 @@ public class ContentfulSourceTask  extends SourceTask {
                 syncToken = (String) offset.get("position");
             }
         }
-        stop = new AtomicBoolean(false);
+        stop = new CountDownLatch(1);
     }
 
     @Override
     public List<SourceRecord> poll() throws InterruptedException
     {
-        while(!stop.get()) {
+
+        log.info("checking for changes with token "+syncToken);
+        try {
+            boolean shuttingDown = this.stop.await(10000L, TimeUnit.MILLISECONDS);
+            if (shuttingDown) {
+                return null;
+            }
+        } catch (InterruptedException e) {
+            // ignore
+        }
+
+        List<String> contentTypes = config.getList(ContentfulSourceTaskConfig.CONTENTTYPES_CONFIG);
+        if(contentTypes.size() == 0)
+        {
+            return  new LinkedList<>();
+        }
+
+        while(stop.getCount() > 0) {
             final List<SourceRecord> results = new LinkedList<>();
             SynchronizedSpace deltas;
-            if(syncToken.isEmpty()){
+            if(syncToken == null || syncToken.isEmpty()){
                deltas =  client.sync().fetch();
             }
             else {
@@ -86,28 +112,40 @@ public class ContentfulSourceTask  extends SourceTask {
                     {
                         String key = entry.getKey();
                         CDAEntry content = entry.getValue();
+
                         Map<String, String> partition =  Collections.singletonMap(ContentfulSourceTaskConfig.CONTENTTYPE_NAME_KEY, content.contentType().name());
 
-                        results.add(new SourceRecord(partition, offset, topicContentTypes, ContentfulSchemas.Key, key, ContentfulSchemas.Entry, content));
+                        log.info("found "+ content.contentType().name() + " with id "+key);
+
+                        if(content.contentType().name() == "Brand"){
+                            Schema valueSchema = ContentfulSchemas.convert(content.contentType());
+                            Struct record = ContentfulSchemas.convert(content,valueSchema);
+                            results.add(new SourceRecord(partition, offset, topicContentTypes, ContentfulSchemas.Key, key, valueSchema, record));
+                        }
                     }
                 }
 
+                /*
                 if(deltas.assets() != null)
                 {
                     for(Map.Entry<String, CDAAsset> asset : deltas.assets().entrySet())
                     {
                         String key = asset.getKey();
-                        Map<String, String> partition =  Collections.singletonMap(ContentfulSourceTaskConfig.ASSET_NAME_KEY, ContentfulSourceTaskConfig.ASSET_NAME_KEY);
-                        results.add(new SourceRecord(partition, offset, topicAssets, ContentfulSchemas.Key, key, ContentfulSchemas.Asset, asset));
-                    }
-                }
+                        CDAAsset content = asset.getValue();
 
-                return results;
+                        log.info("found asset with id "+key);
+                        Map<String, String> partition =  Collections.singletonMap(ContentfulSourceTaskConfig.ASSET_NAME_KEY, ContentfulSourceTaskConfig.ASSET_NAME_KEY);
+                        results.add(new SourceRecord(partition, offset, topicAssets, ContentfulSchemas.Key, key, ContentfulSchemas.Asset, content));
+                    }
+                }*/
             }
+            return results;
         }
 
         return null;
     }
+
+
 
     private List<Map<String, String>> getPartitions(){
         List<String> contentTypes = config.getList(ContentfulSourceTaskConfig.CONTENTTYPES_CONFIG);
@@ -126,7 +164,7 @@ public class ContentfulSourceTask  extends SourceTask {
     @Override
     public synchronized void stop() {
         if (stop != null) {
-            stop.set(true);
+            stop.countDown();
         }
 
         client = null;

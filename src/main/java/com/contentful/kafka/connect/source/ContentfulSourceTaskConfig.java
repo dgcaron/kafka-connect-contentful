@@ -14,7 +14,9 @@ public class ContentfulSourceTaskConfig  extends ContentfulSourceConnectorConfig
     public static final String ASSET_NAME_KEY = "asset";
 
     static ConfigDef config = Create()
-            .define(CONTENTTYPES_CONFIG, ConfigDef.Type.LIST, ConfigDef.Importance.HIGH,CONTENTTYPES_DOC);
+            .define(CONTENTTYPES_CONFIG, ConfigDef.Type.LIST,"Brand,Product,Category,asset", ConfigDef.Importance.HIGH,CONTENTTYPES_DOC);
+
+
 
     public ContentfulSourceTaskConfig(Map<String, String> props) {
         super(config, props);

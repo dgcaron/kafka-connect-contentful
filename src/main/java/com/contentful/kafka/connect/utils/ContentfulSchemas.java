@@ -62,16 +62,20 @@ public class ContentfulSchemas {
             Schema fieldSchema = schema.field(key).schema();
 
             if (fieldSchema != null) {
-                if (fieldSchema.field(locale) != null && fieldSchema.field(locale).schema() == Schema.STRING_SCHEMA) {
-                    Struct field = new Struct(SchemaBuilder.struct().field(locale, Schema.STRING_SCHEMA).build());
-                    field.put(locale, ((Map<String, String>) obj).get(locale));
 
-                    struct.put(key, field);
+                //if (fieldSchema.field(locale) != null && fieldSchema.field(locale).schema() == Schema.STRING_SCHEMA) {
+                    //Struct field = new Struct(SchemaBuilder.struct().field(locale, Schema.STRING_SCHEMA).build());
+
+                    //String value = ((Map<String, String>) obj).get(locale);
+
+                    //field.put(locale, value);
+
+                    struct.put(key, obj);
 
                     //struct.put(key, convert((Map<String,Object>)obj,schema.field(key).schema()));
-                } else {
-                    struct.put(key, obj);
-                }
+                //} else {
+                //    struct.put(key, obj);
+                //}
             }
             else{
                 // dropping field
@@ -161,32 +165,31 @@ public class ContentfulSchemas {
         switch (field.type())
         {
             case "Text":{
-                schema = schema.field("en-US", Schema.STRING_SCHEMA);
+                schema = SchemaBuilder.map(Schema.STRING_SCHEMA,SchemaBuilder.STRING_SCHEMA);
                 break;
             }
             case "Integer":{
-                schema = schema.field("en-US", Schema.INT32_SCHEMA);
+                schema = SchemaBuilder.map(Schema.STRING_SCHEMA, Schema.INT32_SCHEMA);
                 break;
             }
             case "Location":{
-                schema = schema
-                        .field("en-US", SchemaBuilder.struct()
+                schema = SchemaBuilder.map(Schema.STRING_SCHEMA, SchemaBuilder.struct()
                                 .field("lat",Schema.FLOAT32_SCHEMA)
-                                .field("lon",Schema.FLOAT32_SCHEMA));
+                                .field("lon",Schema.FLOAT32_SCHEMA).build());
             }
             case "Symbol":{
-                schema = schema.field("en-US", Schema.STRING_SCHEMA);
+                schema = SchemaBuilder.map(Schema.STRING_SCHEMA,SchemaBuilder.STRING_SCHEMA);
+                //schema.field("en-US", Schema.STRING_SCHEMA);
                 break;
             }
             case "Link":{
-                schema = schema.field("en-US", SchemaBuilder.struct()
-                                 .field("sys",SchemaBuilder.struct()
-                                   .field("id",Schema.STRING_SCHEMA)
-                                   .field("type",Schema.STRING_SCHEMA)
-                                   .field("linkType",Schema.STRING_SCHEMA)));
+                schema = SchemaBuilder.map(Schema.STRING_SCHEMA, SchemaBuilder.map(Schema.STRING_SCHEMA,
+                                 SchemaBuilder.map(Schema.STRING_SCHEMA,Schema.STRING_SCHEMA)));
                 break;
             }
             case "Array":{
+                schema = SchemaBuilder.map(Schema.STRING_SCHEMA, SchemaBuilder.array(Schema.STRING_SCHEMA).build());
+
                 break;
             }
             default: {
@@ -194,7 +197,7 @@ public class ContentfulSchemas {
             }
         }
 
-        if(!field.isRequired()) {
+        if(field.isRequired()) {
             return schema.required().build();
         } else {
            return schema.optional().build();

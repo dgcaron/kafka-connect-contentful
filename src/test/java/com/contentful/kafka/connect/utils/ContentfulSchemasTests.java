@@ -49,6 +49,7 @@ public class ContentfulSchemasTests {
         converter = new AvroConverter(schemaRegistry);
        schemas = new ContentfulSchemas();
 
+       
 
     }
 
@@ -68,6 +69,8 @@ public class ContentfulSchemasTests {
         return field;
     };
 
+
+    
 
 
     @Test
